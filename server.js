@@ -8,6 +8,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Active device streams storage
+// Key: deviceModel, Value: Set of viewer sockets
 const activeStreams = new Map();
 
 app.get('/webcam', (req, res) => {
@@ -15,39 +17,43 @@ app.get('/webcam', (req, res) => {
 });
 
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Server running smoothly on port ${PORT}`);
+    console.log(`🚀 Production Server running flawlessly on port ${PORT}`);
 });
 
-// WebSocket Server Setup
 const wss = new WebSocketServer({ server });
 
-// Render Auto-Disconnect Bypass: Ping clients every 25 seconds
+// Keep-alive heartbeat loop to prevent Render from idling out
 setInterval(() => {
     wss.clients.forEach((ws) => {
         if (ws.readyState === 1) {
-            ws.ping(); // Keep-alive heartbeat
+            ws.ping();
         }
     });
-}, 25000);
+}, 20000);
 
 wss.on('connection', (ws) => {
     let clientType = null;
     let deviceModel = null;
 
-    ws.on('message', (message) => {
+    ws.on('message', (message, isBinary) => {
         try {
-            if (typeof message === 'string' || !Buffer.isBuffer(message)) {
-                const data = JSON.parse(message);
+            // FIX: Agar binary data nahi hai, toh use decode karke JSON parse karo
+            if (!isBinary) {
+                const textData = message.toString();
+                const data = JSON.parse(textData);
 
+                // 1. Android App Registration
                 if (data.type === 'register_app') {
                     clientType = 'app';
                     deviceModel = data.deviceModel.toUpperCase();
+                    
                     if (!activeStreams.has(deviceModel)) {
                         activeStreams.set(deviceModel, new Set());
                     }
-                    console.log(`📱 App Registered: ${deviceModel}`);
+                    console.log(`📱 Android App Synced: ${deviceModel}`);
                 }
 
+                // 2. Viewer Registration
                 if (data.type === 'register_viewer') {
                     clientType = 'viewer';
                     deviceModel = data.deviceModel.toUpperCase();
@@ -57,36 +63,42 @@ wss.on('connection', (ws) => {
                     }
                     activeStreams.get(deviceModel).add(ws);
                     
-                    console.log(`👀 Viewer Registered for: ${deviceModel}`);
-                    ws.send(JSON.stringify({ status: "connected", message: "Streaming Tunnel Open" }));
+                    console.log(`👀 Web Viewer Attached to: ${deviceModel}`);
+                    ws.send(JSON.stringify({ status: "connected", message: "Tunnel Active" }));
                 }
-            } else if (Buffer.isBuffer(message)) {
+            } 
+            // 3. Binary Frame Forwarding
+            else {
                 if (clientType === 'app' && deviceModel) {
                     const viewers = activeStreams.get(deviceModel);
                     if (viewers && viewers.size > 0) {
                         viewers.forEach((viewerSocket) => {
                             if (viewerSocket.readyState === 1) {
-                                viewerSocket.send(message);
+                                viewerSocket.send(message); // Forward frame to web client
                             }
                         });
                     }
                 }
             }
         } catch (error) {
-            console.error("Payload error:", error);
+            console.error("Transmission Error:", error);
         }
     });
 
     ws.on('close', () => {
         if (clientType === 'app' && deviceModel) {
+            console.log(`🔴 App disconnected: ${deviceModel}`);
             const viewers = activeStreams.get(deviceModel);
             if (viewers) {
-                viewers.forEach(v => v.send(JSON.stringify({ status: "offline", message: "Device went offline" })));
+                viewers.forEach(v => v.send(JSON.stringify({ status: "offline" })));
             }
             activeStreams.delete(deviceModel);
         } else if (clientType === 'viewer' && deviceModel) {
             const viewers = activeStreams.get(deviceModel);
-            if (viewers) viewers.delete(ws);
+            if (viewers) {
+                viewers.delete(ws);
+                console.log(`👋 Viewer left channel: ${deviceModel}`);
+            }
         }
     });
 });
