@@ -1,15 +1,23 @@
 {
-  "name": "boomxs8-backend",
+  "name": "android-webcam-streamer",
   "version": "1.0.0",
-  "description": "Realtime Signaling Server for Screen Mirroring",
+  "description": "Real-time zero storage webcam streaming server for Android 26+",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
+  "keywords": [
+    "android",
+    "webcam",
+    "websocket",
+    "live-stream",
+    "render"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "ws": "^8.16.0"
-  },
-  "engines": {
-    "node": ">=14.0.0"
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
   }
 }
