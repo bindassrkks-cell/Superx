@@ -8,26 +8,23 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Active device streams storage
-// Key: deviceModel, Value: Set of viewer sockets
-const activeStreams = new Map();
+// Key: deviceModel, Value: { appSocket: ws, viewerSockets: Set }
+const deviceTunnels = new Map();
 
 app.get('/webcam', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Production Server running flawlessly on port ${PORT}`);
+    console.log(`🚀 Telemetry Server running on port ${PORT}`);
 });
 
 const wss = new WebSocketServer({ server });
 
-// Keep-alive heartbeat loop to prevent Render from idling out
+// Render Connection Drop Bypass
 setInterval(() => {
     wss.clients.forEach((ws) => {
-        if (ws.readyState === 1) {
-            ws.ping();
-        }
+        if (ws.readyState === 1) ws.ping();
     });
 }, 20000);
 
@@ -37,68 +34,86 @@ wss.on('connection', (ws) => {
 
     ws.on('message', (message, isBinary) => {
         try {
-            // FIX: Agar binary data nahi hai, toh use decode karke JSON parse karo
             if (!isBinary) {
-                const textData = message.toString();
-                const data = JSON.parse(textData);
+                const data = JSON.parse(message.toString());
 
-                // 1. Android App Registration
+                // 1. Android App Auth Setup
                 if (data.type === 'register_app') {
                     clientType = 'app';
                     deviceModel = data.deviceModel.toUpperCase();
                     
-                    if (!activeStreams.has(deviceModel)) {
-                        activeStreams.set(deviceModel, new Set());
+                    if (!deviceTunnels.has(deviceModel)) {
+                        deviceTunnels.set(deviceModel, { appSocket: null, viewerSockets: new Set() });
                     }
-                    console.log(`📱 Android App Synced: ${deviceModel}`);
+                    deviceTunnels.get(deviceModel).appSocket = ws;
+                    console.log(`📱 Hardware Terminal Registered: ${deviceModel}`);
+                    
+                    // Notify active viewers that app is online
+                    const tunnel = deviceTunnels.get(deviceModel);
+                    tunnel.viewerSockets.forEach(v => v.send(JSON.stringify({ status: "app_online" })));
                 }
 
-                // 2. Viewer Registration
+                // 2. Web Viewer Dashboard Setup
                 if (data.type === 'register_viewer') {
                     clientType = 'viewer';
                     deviceModel = data.deviceModel.toUpperCase();
                     
-                    if (!activeStreams.has(deviceModel)) {
-                        activeStreams.set(deviceModel, new Set());
+                    if (!deviceTunnels.has(deviceModel)) {
+                        deviceTunnels.set(deviceModel, { appSocket: null, viewerSockets: new Set() });
                     }
-                    activeStreams.get(deviceModel).add(ws);
+                    deviceTunnels.get(deviceModel).viewerSockets.add(ws);
+                    console.log(`👀 Operator Viewer Registered for: ${deviceModel}`);
                     
-                    console.log(`👀 Web Viewer Attached to: ${deviceModel}`);
-                    ws.send(JSON.stringify({ status: "connected", message: "Tunnel Active" }));
+                    const tunnel = deviceTunnels.get(deviceModel);
+                    const isAppLive = tunnel.appSocket && tunnel.appSocket.readyState === 1;
+                    ws.send(JSON.stringify({ 
+                        status: "connected", 
+                        deviceState: isAppLive ? "ONLINE" : "OFFLINE" 
+                    }));
+                }
+
+                // 3. Web UI se Control Commands Router (Forward direct to Android)
+                if (data.type === 'control_cmd') {
+                    const targetModel = data.deviceModel.toUpperCase();
+                    const tunnel = deviceTunnels.get(targetModel);
+                    if (tunnel && tunnel.appSocket && tunnel.appSocket.readyState === 1) {
+                        tunnel.appSocket.send(JSON.stringify({
+                            action: data.action, // START_CAM, STOP_CAM, SWITCH_CAM
+                            cameraFacing: data.cameraFacing // "FRONT" or "BACK"
+                        }));
+                        console.log(`📡 Forwarded Remote Command [${data.action}] to ${targetModel}`);
+                    }
                 }
             } 
-            // 3. Binary Frame Forwarding
+            // 4. Binary Frame Matrix Pipeline (App to Viewer)
             else {
                 if (clientType === 'app' && deviceModel) {
-                    const viewers = activeStreams.get(deviceModel);
-                    if (viewers && viewers.size > 0) {
-                        viewers.forEach((viewerSocket) => {
+                    const tunnel = deviceTunnels.get(deviceModel);
+                    if (tunnel && tunnel.viewerSockets.size > 0) {
+                        tunnel.viewerSockets.forEach((viewerSocket) => {
                             if (viewerSocket.readyState === 1) {
-                                viewerSocket.send(message); // Forward frame to web client
+                                viewerSocket.send(message);
                             }
                         });
                     }
                 }
             }
         } catch (error) {
-            console.error("Transmission Error:", error);
+            console.error("Pipeline Engine Exception:", error);
         }
     });
 
     ws.on('close', () => {
         if (clientType === 'app' && deviceModel) {
-            console.log(`🔴 App disconnected: ${deviceModel}`);
-            const viewers = activeStreams.get(deviceModel);
-            if (viewers) {
-                viewers.forEach(v => v.send(JSON.stringify({ status: "offline" })));
+            const tunnel = deviceTunnels.get(deviceModel);
+            if (tunnel) {
+                tunnel.viewerSockets.forEach(v => v.send(JSON.stringify({ status: "offline" })));
+                tunnel.appSocket = null;
             }
-            activeStreams.delete(deviceModel);
+            console.log(`🔴 Hardware Node Offline: ${deviceModel}`);
         } else if (clientType === 'viewer' && deviceModel) {
-            const viewers = activeStreams.get(deviceModel);
-            if (viewers) {
-                viewers.delete(ws);
-                console.log(`👋 Viewer left channel: ${deviceModel}`);
-            }
+            const tunnel = deviceTunnels.get(deviceModel);
+            if (tunnel) tunnel.viewerSockets.delete(ws);
         }
     });
 });
