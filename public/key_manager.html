@@ -46,7 +46,7 @@
             </tr>
         </thead>
         <tbody id="statusTable">
-            <tr><td colspan="3" style="text-align:center; color:#666;">Loading database pipeline...</td></tr>
+            <tr><td colspan="3" style="text-align:center; color:#666;">Connecting to Cloud Database...</td></tr>
         </tbody>
     </table>
 </div>
@@ -65,12 +65,11 @@
             }
 
             data.forEach(item => {
-                let statusLabel = item.status;
                 tbody.innerHTML += `
                     <tr>
                         <td><span class="key-badge">${item.key}</span></td>
                         <td style="color: #ccc;">${item.connectedDevice}</td>
-                        <td class="status-${statusLabel}">${statusLabel}</td>
+                        <td class="status-${item.status}">${item.status}</td>
                     </tr>
                 `;
             });
@@ -89,20 +88,20 @@
             });
             const data = await res.json();
             if(data.success) {
-                alert("🎉 New System Key Generated Successfully:\n\n" + data.key);
-                loadStatus();
+                alert("🎉 Cloud Key Generated Successfully!\n\nKey: " + data.key);
+                loadStatus(); // Immediately update table
             } else {
-                alert("Generation failed on cloud instance.");
+                alert("Generation failed on Supabase API endpoint.");
             }
         } catch(e) {
-            alert("Network connection error.");
+            alert("Network pipeline connection error.");
         }
     }
 
-    // Initial Bootstrap fetch
+    // Load table content on startup
     loadStatus();
-    // Auto-refresh stats every 8 seconds
-    setInterval(loadStatus, 8000);
+    // Auto sync refresh lookups loop every 5 seconds
+    setInterval(loadStatus, 5000);
 </script>
 </body>
 </html>
