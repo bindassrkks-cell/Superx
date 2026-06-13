@@ -5,49 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Key Matrix Manager</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 8px; }
-        button { background: #00bcd4; color: #fff; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; margin: 0; }
+        .container { max-width: 500px; margin: 20px auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 8px; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 20px; }
+        .control-group { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; background: #292929; padding: 12px; border-radius: 8px; }
+        label { font-size: 14px; color: #ccc; }
+        input { padding: 8px; width: 60px; background: #121212; color: #fff; border: 1px solid #444; text-align: center; border-radius: 6px; font-size: 16px; }
+        button { flex-grow: 1; background: #00bcd4; color: #fff; border: none; padding: 10px 15px; font-size: 15px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #0097a7; }
-        input { padding: 8px; width: 60px; background: #333; color: #fff; border: 1px solid #555; text-align: center; border-radius: 4px; }
-        .backup-box { margin-top: 20px; background: #000; padding: 15px; border-radius: 5px; border: 1px dashed #00bcd4; display: none; }
-        textarea { width: 100%; height: 120px; background: #222; color: #0f0; border: 1px solid #444; font-family: monospace; padding: 5px; margin-top: 10px; box-sizing: border-box; }
-        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-        th, td { padding: 10px; border: 1px solid #444; text-align: left; }
-        th { background: #333; }
+        h3 { font-size: 18px; margin-top: 20px; border-bottom: 1px solid #333; padding-bottom: 8px; color: #00bcd4; }
+        table { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; text-align: left; }
+        th { background: #252525; color: #aaa; font-weight: 500; }
         .status-ACTIVE_LOGIN { color: #4caf50; font-weight: bold; }
-        .status-PENDING { color: #ffeb3b; }
-        .status-EXPIRED { color: #f44336; }
+        .status-PENDING { color: #ffeb3b; font-weight: bold; }
+        .status-EXPIRED { color: #f44336; font-weight: bold; }
+        .key-badge { background: #333; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #00bcd4; font-size: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>🔐 Core Key Matrix Controller</h2>
-    <p>Set validity duration and click generate to deploy a new access pass.</p>
+    <p>Set validity duration and click generate to deploy a new cloud-saved token.</p>
     
-    <label>Duration (Hours): </label>
-    <input type="number" id="duration" value="24" min="1">
-    <button onclick="generateKey()">⚡ Generate Token</button>
-
-    <div id="backupZone" class="backup-box">
-        <h3 style="margin-top:0; color:#00bcd4;">👉 Copy this to GitHub key.json</h3>
-        <p style="font-size: 12px; color:#aaa;">Niche diye gaye pure text ko select-all karke copy karein aur apni GitHub repo ki <b>key.json</b> me paste karke save kar dein:</p>
-        <textarea id="backupText" readonly></textarea>
-        <button style="background:#4caf50; margin-top:5px; padding: 5px 10px; font-size:12px;" onclick="copyBackupText()">📋 Copy Text</button>
+    <div class="control-group">
+        <label>Hours:</label>
+        <input type="number" id="duration" value="24" min="1">
+        <button onclick="generateKey()">⚡ Generate Token</button>
     </div>
 
     <h3>📊 Active Keys Real-Time Status</h3>
     <table>
         <thead>
             <tr>
-                <th>System Access Token</th>
+                <th>Access Token</th>
                 <th>Linked Device</th>
                 <th>Status</th>
             </tr>
         </thead>
         <tbody id="statusTable">
-            <tr><td colspan="3" style="text-align:center; color:#aaa;">Loading live state...</td></tr>
+            <tr><td colspan="3" style="text-align:center; color:#666;">Loading database pipeline...</td></tr>
         </tbody>
     </table>
 </div>
@@ -60,22 +59,23 @@
             const tbody = document.getElementById('statusTable');
             tbody.innerHTML = '';
 
-            if(data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#aaa;">No tokens active in pool.</td></tr>';
+            if(!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#aaa; padding: 20px;">No tokens active in pool.</td></tr>';
                 return;
             }
 
             data.forEach(item => {
+                let statusLabel = item.status;
                 tbody.innerHTML += `
                     <tr>
-                        <td><b>${item.key}</b></td>
-                        <td>${item.connectedDevice}</td>
-                        <td class="status-${item.status}">${item.status}</td>
+                        <td><span class="key-badge">${item.key}</span></td>
+                        <td style="color: #ccc;">${item.connectedDevice}</td>
+                        <td class="status-${statusLabel}">${statusLabel}</td>
                     </tr>
                 `;
             });
         } catch(e) {
-            console.error(e);
+            console.error("Status Load Error:", e);
         }
     }
 
@@ -89,29 +89,20 @@
             });
             const data = await res.json();
             if(data.success) {
-                alert("New Token Generated: " + data.key);
-                
-                // Backup zone me text show karo taaki user github pe daal sake
-                document.getElementById('backupZone').style.display = 'block';
-                document.getElementById('backupText').value = JSON.stringify(data.fullBackup, null, 2);
-                
+                alert("🎉 New System Key Generated Successfully:\n\n" + data.key);
                 loadStatus();
+            } else {
+                alert("Generation failed on cloud instance.");
             }
         } catch(e) {
-            alert("Generation failed.");
+            alert("Network connection error.");
         }
     }
 
-    function copyBackupText() {
-        const copyText = document.getElementById("backupText");
-        copyText.select();
-        copyText.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(copyText.value);
-        alert("JSON content copied! Go to GitHub key.json and paste it.");
-    }
-
-    // Pehli baar load hone par status check karein
+    // Initial Bootstrap fetch
     loadStatus();
+    // Auto-refresh stats every 8 seconds
+    setInterval(loadStatus, 8000);
 </script>
 </body>
 </html>
