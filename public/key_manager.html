@@ -3,56 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Key Matrix Manager</title>
+    <title>Live Device Terminal Hub</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; margin: 0; }
-        .container { max-width: 500px; margin: 20px auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .container { max-width: 550px; margin: 20px auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         h2 { margin-top: 0; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 8px; }
-        p { color: #aaa; font-size: 14px; margin-bottom: 20px; }
-        .control-group { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; background: #292929; padding: 12px; border-radius: 8px; }
-        label { font-size: 14px; color: #ccc; }
-        input { padding: 8px; width: 60px; background: #121212; color: #fff; border: 1px solid #444; text-align: center; border-radius: 6px; font-size: 16px; }
-        button { flex-grow: 1; background: #00bcd4; color: #fff; border: none; padding: 10px 15px; font-size: 15px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: background 0.2s; }
-        button:hover { background: #0097a7; }
-        h3 { font-size: 18px; margin-top: 20px; border-bottom: 1px solid #333; padding-bottom: 8px; color: #00bcd4; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
         table { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; text-align: left; }
         th { background: #252525; color: #aaa; font-weight: 500; }
         .status-ACTIVE_LOGIN { color: #4caf50; font-weight: bold; }
-        .status-PENDING { color: #ffeb3b; font-weight: bold; }
-        .status-EXPIRED { color: #f44336; font-weight: bold; }
-        .key-badge { background: #333; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #00bcd4; font-size: 15px; }
+        .status-PENDING { color: #ff9800; font-weight: bold; }
+        .device-badge { background: #2a2a2a; padding: 6px 10px; border-radius: 6px; font-family: monospace; color: #00bcd4; font-size: 14px; border: 1px solid #3d3d3d; }
+        .refresh-indicator { font-size: 12px; color: #666; text-align: right; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🔐 Core Key Matrix Controller</h2>
-    <p>Set validity duration and click generate to deploy a new cloud-saved token.</p>
+    <h2>📱 Core Device Terminal Hub</h2>
+    <p>No keys required. Open the application on your mobile device, enter or broadcast your device model number, and it will stream live instantly in the matrix pool below.</p>
     
-    <div class="control-group">
-        <label>Hours:</label>
-        <input type="number" id="duration" value="24" min="1">
-        <button onclick="generateKey()">⚡ Generate Token</button>
-    </div>
-
-    <h3>📊 Active Keys Real-Time Status</h3>
-    <table>
+    <table id="deviceTable">
         <thead>
             <tr>
-                <th>Access Token</th>
-                <th>Linked Device</th>
-                <th>Status</th>
+                <th>Active Device Model</th>
+                <th>Streaming Port</th>
+                <th>Network Status</th>
             </tr>
         </thead>
         <tbody id="statusTable">
-            <tr><td colspan="3" style="text-align:center; color:#666;">Connecting to Cloud Database...</td></tr>
+            <tr><td colspan="3" style="text-align:center; color:#666; padding:20px;">Waiting for active hardware streams...</td></tr>
         </tbody>
     </table>
+    <div class="refresh-indicator">🔄 Auto-synchronizing in real-time...</div>
 </div>
 
 <script>
-    async function loadStatus() {
+    async function loadConnectedDevices() {
         try {
             const res = await fetch('/api/keys-status');
             const data = await res.json();
@@ -60,48 +48,31 @@
             tbody.innerHTML = '';
 
             if(!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#aaa; padding: 20px;">No tokens active in pool.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888; padding: 30px;">No mobile hardware detected online.</td></tr>';
                 return;
             }
 
             data.forEach(item => {
+                let displayStatus = item.status === "ACTIVE_LOGIN" ? "🔴 LIVE STREAMING" : "STANDBY / DISCONNECTED";
+                let statusClass = item.status;
+                
                 tbody.innerHTML += `
                     <tr>
-                        <td><span class="key-badge">${item.key}</span></td>
-                        <td style="color: #ccc;">${item.connectedDevice}</td>
-                        <td class="status-${item.status}">${item.status}</td>
+                        <td><span class="device-badge">${item.connectedDevice}</span></td>
+                        <td><a href="/webcam?device=${encodeURIComponent(item.connectedDevice)}" style="color:#00bcd4; text-decoration:none; font-weight:bold;">🔗 View Screen</a></td>
+                        <td class="status-${statusClass}">${displayStatus}</td>
                     </tr>
                 `;
             });
         } catch(e) {
-            console.error("Status Load Error:", e);
+            console.error("Device Sync Registry Failure:", e);
         }
     }
 
-    async function generateKey() {
-        const hours = document.getElementById('duration').value;
-        try {
-            const res = await fetch('/api/generate-key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ durationHours: hours })
-            });
-            const data = await res.json();
-            if(data.success) {
-                alert("🎉 Cloud Key Generated Successfully!\n\nKey: " + data.key);
-                loadStatus(); // Immediately update table
-            } else {
-                alert("Generation failed on Supabase API endpoint.");
-            }
-        } catch(e) {
-            alert("Network pipeline connection error.");
-        }
-    }
-
-    // Load table content on startup
-    loadStatus();
-    // Auto sync refresh lookups loop every 5 seconds
-    setInterval(loadStatus, 5000);
+    // Initial check
+    loadConnectedDevices();
+    // Realtime pool sync checking loop every 4 seconds
+    setInterval(loadConnectedDevices, 4000);
 </script>
 </body>
 </html>
