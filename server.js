@@ -8,16 +8,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Supabase Configuration Details
+// Supabase Infrastructure Gateway Router
 const SUPABASE_URL = "https://ilnzqxlbvwqhdwjowmnc.supabase.co/rest/v1/key_matrix";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsbnpxeGxidndxaGR3am93bW5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTQzNDEsImV4cCI6MjA5NjkzMDM0MX0.8WVHK-NGPujWmNntI8lZkSuKQgrfv6N0vnfrBXmBoiE";
 
-// Active Streaming Tunnels Storage (In-Memory Only)
+// Live Real-Time Web Tunnel Buffers
 const activeTunnels = new Map();
 
-// --- SUPABASE DATABASE HELPER FUNCTIONS ---
+// --- SECURE SUPABASE DATA ARCHITECTURE ENGINE ---
 
-// 1. Fetch all keys from Supabase
+// 1. Database read function
 async function getAllKeysFromSupabase() {
     try {
         const response = await fetch(`${SUPABASE_URL}?select=*`, {
@@ -33,12 +33,12 @@ async function getAllKeysFromSupabase() {
         }
         return [];
     } catch (error) {
-        console.error("❌ Supabase Fetch Error:", error);
+        console.error("❌ Cloud DB Connection Interruption:", error);
         return [];
     }
 }
 
-// 2. Insert a new generated key into Supabase
+// 2. Database write transaction function
 async function insertKeyToSupabase(keyData) {
     try {
         await fetch(SUPABASE_URL, {
@@ -51,13 +51,13 @@ async function insertKeyToSupabase(keyData) {
             },
             body: JSON.stringify(keyData)
         });
-        console.log(`💾 [SUPABASE] Key ${keyData.key_string} successfully created.`);
+        console.log(`💾 [CLOUD STORE] Key Block [${keyData.key_string}] successfully written to database.`);
     } catch (error) {
-        console.error("❌ Supabase Insert Error:", error);
+        console.error("❌ Cloud DB Commit Error:", error);
     }
 }
 
-// 3. Update connection state or metadata in Supabase
+// 3. Database mutation update function
 async function updateKeyInSupabase(keyString, updateData) {
     try {
         await fetch(`${SUPABASE_URL}?key_string=eq.${keyString}`, {
@@ -69,14 +69,14 @@ async function updateKeyInSupabase(keyString, updateData) {
             },
             body: JSON.stringify(updateData)
         });
-        console.log(`🔄 [SUPABASE] Key ${keyString} successfully updated.`);
+        console.log(`🔄 [CLOUD REFRESH] Mapping state mutated for token: ${keyString}`);
     } catch (error) {
-        console.error("❌ Supabase Update Error:", error);
+        console.error("❌ Cloud DB Mutation Error:", error);
     }
 }
 
 
-// --- HTTP ROUTING ENGINE ---
+// --- HTTP API ROUTING SYSTEM ---
 
 app.get('/webcam', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -95,7 +95,7 @@ app.post('/api/generate-key', async (req, res) => {
     const createdAt = new Date();
     const expiresAt = new Date(createdAt.getTime() + (hours * 60 * 60 * 1000));
 
-    // Instant Save to Cloud Database
+    // Direct transaction dispatch to Supabase Cloud Storage
     await insertKeyToSupabase({
         key_string: newKey,
         created_at: createdAt.toISOString(),
@@ -107,7 +107,7 @@ app.post('/api/generate-key', async (req, res) => {
     res.json({ success: true, key: newKey, expiresAt: expiresAt });
 });
 
-// API endpoint to fetch current status of all keys (Queries directly from Supabase)
+// API endpoint to fetch current status of all keys
 app.get('/api/keys-status', async (req, res) => {
     const rows = await getAllKeysFromSupabase();
     const statusArray = rows.map(row => {
@@ -123,10 +123,10 @@ app.get('/api/keys-status', async (req, res) => {
 });
 
 
-// --- CORE TELEMETRY SERVER ENGINE ---
+// --- TELEMETRY NETWORKING PIPELINE ---
 
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Core Secure Asset Manager deployed on port ${PORT} with Cloud Supabase Layer.`);
+    console.log(`🚀 Telemetry Switchboard deployed on port ${PORT}. Persistence bound to Supabase Cluster.`);
 });
 
 const wss = new WebSocketServer({ server });
@@ -152,7 +152,6 @@ wss.on('connection', (ws) => {
                     const clientKey = data.authKey;
                     const modelInput = data.deviceModel ? data.deviceModel.toUpperCase() : "UNKNOWN";
 
-                    // Fetch raw key direct from Supabase to validate real-time existence
                     const rows = await getAllKeysFromSupabase();
                     const keyRecord = rows.find(r => r.key_string === clientKey);
 
@@ -164,7 +163,6 @@ wss.on('connection', (ws) => {
                             assignedKey = clientKey;
                             deviceModel = modelInput;
 
-                            // Update cloud database mapping status
                             await updateKeyInSupabase(assignedKey, { connected_device: deviceModel });
 
                             if (!activeTunnels.has(assignedKey)) {
@@ -250,7 +248,6 @@ wss.on('connection', (ws) => {
                 tunnel.viewerSockets.forEach(v => v.send(JSON.stringify({ status: "offline" })));
                 tunnel.appSocket = null;
             }
-            // Disconnect state ko cloud storage database me synchronize karein
             await updateKeyInSupabase(assignedKey, { connected_device: "DISCONNECTED (STALE)" });
         } else if (clientType === 'viewer' && assignedKey) {
             const tunnel = activeTunnels.get(assignedKey);
