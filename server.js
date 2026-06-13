@@ -8,16 +8,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Supabase Infrastructure Gateway Router
+// Supabase Infrastructure Connection Target
 const SUPABASE_URL = "https://ilnzqxlbvwqhdwjowmnc.supabase.co/rest/v1/key_matrix";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsbnpxeGxidndxaGR3am93bW5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTQzNDEsImV4cCI6MjA5NjkzMDM0MX0.8WVHK-NGPujWmNntI8lZkSuKQgrfv6N0vnfrBXmBoiE";
 
-// Live Real-Time Web Tunnel Buffers
+// Live WebSocket Active Tunnels Mapping Buffer
 const activeTunnels = new Map();
 
-// --- SECURE SUPABASE DATA ARCHITECTURE ENGINE ---
+// --- SUPABASE ENGINE CORE TRANSACTIONS ---
 
-// 1. Database read function
+// 1. Direct Pull API: Reads rows from cloud infrastructure
 async function getAllKeysFromSupabase() {
     try {
         const response = await fetch(`${SUPABASE_URL}?select=*`, {
@@ -29,19 +29,24 @@ async function getAllKeysFromSupabase() {
             }
         });
         if (response.ok) {
-            return await response.json();
+            const data = await response.json();
+            console.log(`📡 [SUPABASE FETCH] Successfully downloaded ${data.length} records from cloud storage.`);
+            return data;
+        } else {
+            const errText = await response.text();
+            console.error(`❌ [SUPABASE FETCH ERROR] Status: ${response.status}. Msg: ${errText}`);
+            return [];
         }
-        return [];
     } catch (error) {
-        console.error("❌ Cloud DB Connection Interruption:", error);
+        console.error("❌ [SUPABASE NETWORK CRASH]:", error);
         return [];
     }
 }
 
-// 2. Database write transaction function
+// 2. Direct Push API: Writes a new token block into the cloud table cluster
 async function insertKeyToSupabase(keyData) {
     try {
-        await fetch(SUPABASE_URL, {
+        const response = await fetch(SUPABASE_URL, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_KEY,
@@ -51,16 +56,21 @@ async function insertKeyToSupabase(keyData) {
             },
             body: JSON.stringify(keyData)
         });
-        console.log(`💾 [CLOUD STORE] Key Block [${keyData.key_string}] successfully written to database.`);
+        if (response.ok || response.status === 201) {
+            console.log(`✅ [SUPABASE SUCCESS] Token Block [${keyData.key_string}] committed successfully.`);
+        } else {
+            const errText = await response.text();
+            console.error(`❌ [SUPABASE INSERT FAIL] Code: ${response.status}. Msg: ${errText}`);
+        }
     } catch (error) {
-        console.error("❌ Cloud DB Commit Error:", error);
+        console.error("❌ [SUPABASE INSERT NETWORK ERROR]:", error);
     }
 }
 
-// 3. Database mutation update function
+// 3. Mutation Patch API: Updates metadata or device links inside database rows
 async function updateKeyInSupabase(keyString, updateData) {
     try {
-        await fetch(`${SUPABASE_URL}?key_string=eq.${keyString}`, {
+        const response = await fetch(`${SUPABASE_URL}?key_string=eq.${keyString}`, {
             method: 'PATCH',
             headers: {
                 'apikey': SUPABASE_KEY,
@@ -69,14 +79,16 @@ async function updateKeyInSupabase(keyString, updateData) {
             },
             body: JSON.stringify(updateData)
         });
-        console.log(`🔄 [CLOUD REFRESH] Mapping state mutated for token: ${keyString}`);
+        if (response.ok) {
+            console.log(`🔄 [SUPABASE UPDATED] State synced for key: ${keyString}`);
+        }
     } catch (error) {
-        console.error("❌ Cloud DB Mutation Error:", error);
+        console.error("❌ [SUPABASE UPDATE ERROR]:", error);
     }
 }
 
 
-// --- HTTP API ROUTING SYSTEM ---
+// --- HTTP ROUTING PORTS ---
 
 app.get('/webcam', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -86,7 +98,7 @@ app.get('/key', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'key_manager.html'));
 });
 
-// API endpoint to generate new access tokens
+// Endpoint to generate tokens and auto-commit to Supabase
 app.post('/api/generate-key', async (req, res) => {
     const { durationHours } = req.body;
     const hours = parseInt(durationHours) || 24;
@@ -95,7 +107,7 @@ app.post('/api/generate-key', async (req, res) => {
     const createdAt = new Date();
     const expiresAt = new Date(createdAt.getTime() + (hours * 60 * 60 * 1000));
 
-    // Direct transaction dispatch to Supabase Cloud Storage
+    // Instant cloud write pipeline dispatch
     await insertKeyToSupabase({
         key_string: newKey,
         created_at: createdAt.toISOString(),
@@ -107,15 +119,19 @@ app.post('/api/generate-key', async (req, res) => {
     res.json({ success: true, key: newKey, expiresAt: expiresAt });
 });
 
-// API endpoint to fetch current status of all keys
+// Endpoint to fetch real-time statuses from Supabase cluster rows
 app.get('/api/keys-status', async (req, res) => {
     const rows = await getAllKeysFromSupabase();
+    if (!rows || !Array.isArray(rows)) {
+        return res.json([]);
+    }
+
     const statusArray = rows.map(row => {
         const expiresAtDate = new Date(row.expires_at);
         return {
             key: row.key_string,
             expiresAt: row.expires_at,
-            connectedDevice: row.connected_device,
+            connectedDevice: row.connected_device || "NONE (NOT LINKED)",
             status: new Date() > expiresAtDate ? "EXPIRED" : (row.connected_device !== "NONE (NOT LINKED)" && !row.connected_device.includes("DISCONNECTED") ? "ACTIVE_LOGIN" : "PENDING")
         };
     });
@@ -123,10 +139,10 @@ app.get('/api/keys-status', async (req, res) => {
 });
 
 
-// --- TELEMETRY NETWORKING PIPELINE ---
+// --- TELEMETRY CORE SIGNAL STREAMING SOCKET SYSTEM ---
 
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Telemetry Switchboard deployed on port ${PORT}. Persistence bound to Supabase Cluster.`);
+    console.log(`🚀 Telemetry Interface Server operational on routing port: ${PORT}`);
 });
 
 const wss = new WebSocketServer({ server });
@@ -147,7 +163,7 @@ wss.on('connection', (ws) => {
             if (!isBinary) {
                 const data = JSON.parse(message.toString());
 
-                // 1. SAFE APP HANDSHAKE REGISTRATION WITH TOKEN VALIDATION
+                // 1. HARDWARE HANDSHAKE TERMINAL BINDING
                 if (data.type === 'register_app') {
                     const clientKey = data.authKey;
                     const modelInput = data.deviceModel ? data.deviceModel.toUpperCase() : "UNKNOWN";
@@ -183,7 +199,7 @@ wss.on('connection', (ws) => {
                     ws.close();
                 }
 
-                // 2. DASHBOARD VIEW INTERFACE REGISTRATION
+                // 2. VIEWER MANAGEMENT DESK REGISTER
                 if (data.type === 'register_viewer') {
                     const targetKey = data.authKey;
                     
@@ -211,7 +227,7 @@ wss.on('connection', (ws) => {
                     }
                 }
 
-                // 3. REMOTE ADMINISTRATIVE COMMAND SWITCHBOARD
+                // 3. ADMINISTRATIVE INBOUND SWITCH CONTROL COMMANDS
                 if (data.type === 'control_cmd') {
                     if (clientType === 'viewer' && assignedKey) {
                         const tunnel = activeTunnels.get(assignedKey);
