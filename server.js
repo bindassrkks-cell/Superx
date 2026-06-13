@@ -13,7 +13,7 @@ const ENC_TOKEN = "Z2hwX0RrM3pYTlhabVR6Qk5kenk5WWNtbUxhcGsyY2MzSmk2WnM=";
 const GITHUB_TOKEN = Buffer.from(ENC_TOKEN, 'base64').toString('utf-8');
 
 // Aapki GitHub Repository Details
-const GITHUB_REPO = "bindassrkks-cell/CTX-SERVER"; // Agar repo ka naam alag ho toh CTX-SERVER badal dena
+const GITHUB_REPO = "bindassrkks-cell/Superx"; // Agar repo ka naam alag ho toh CTX-SERVER badal dena
 const FILE_PATH = 'key.json';
 
 // Key Matrix Database
