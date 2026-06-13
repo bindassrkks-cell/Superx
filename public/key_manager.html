@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Control System Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0A0A0E; color: #E4E4E7; padding: 30px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { margin-bottom: 30px; border-bottom: 1px solid #1F1F2E; padding-bottom: 15px; }
+        h1 { color: #3B82F6; font-size: 24px; }
+        .panel-box { background: #12121A; border: 1px solid #1F1F2E; border-radius: 16px; padding: 20px; margin-bottom: 25px; }
+        .form-group { display: flex; gap: 15px; margin-top: 15px; }
+        select, button { padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+        select { background: #161622; color: #FFF; border: 1px solid #2D2D3F; }
+        button { background: #3B82F6; color: white; border: none; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #2563EB; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: left; }
+        th, td { padding: 14px; border-bottom: 1px solid #1F1F2E; font-size: 14px; }
+        th { color: #A1A1AA; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        td { font-weight: 500; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .badge-pending { background: rgba(234, 179, 8, 0.15); color: #EAB308; }
+        .badge-active { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+        .badge-expired { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Token Provisioning Subsystem</h1>
+            <p style="color: #71717A; font-size: 14px;">Create and monitor authorization lifecycle channels</p>
+        </div>
+
+        <div class="panel-box">
+            <h3 style="font-size: 16px;">Generate New Registration Token</h3>
+            <div class="form-group">
+                <select id="durationSelect">
+                    <option value="1">Expire in 1 Hour</option>
+                    <option value="12">Expire in 12 Hours</option>
+                    <option value="24" selected>Expire in 24 Hours</option>
+                    <option value="168">Expire in 7 Days</option>
+                </select>
+                <button onclick="createNewKeyToken()">Generate System Key</button>
+            </div>
+            <div id="resultBox" style="margin-top: 15px; font-size: 15px; font-weight: bold; color: #10B981;"></div>
+        </div>
+
+        <div class="panel-box">
+            <h3 style="font-size: 16px; margin-bottom: 10px;">Active System Token Database Matrix</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Access Token Key</th>
+                        <th>Expiration Time</th>
+                        <th>Hardware Node Target</th>
+                        <th>Lifecycle Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tokenTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    function createNewKeyToken() {
+        const hours = document.getElementById('durationSelect').value;
+        fetch('/api/generate-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ durationHours: hours })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('resultBox').innerText = `Successfully Generated: ${data.key}`;
+                updateDatabaseMatrixTable();
+            }
+        });
+    }
+
+    function updateDatabaseMatrixTable() {
+        fetch('/api/keys-status')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('tokenTableBody');
+            tbody.innerHTML = '';
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#52525B;">No tokens allocated yet.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                let badgeClass = "badge-pending";
+                if(item.status === "ACTIVE_LOGIN") badgeClass = "badge-active";
+                if(item.status === "EXPIRED") badgeClass = "badge-expired";
+
+                const row = `<tr>
+                    <td style="color:#3B82F6; font-family:monospace; font-size:15px;">${item.key}</td>
+                    <td>${new Date(item.expiresAt).toLocaleString()}</td>
+                    <td style="color:#FFF;">${item.connectedDevice}</td>
+                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+    }
+
+    // Auto-update table mapping loop every 5 seconds
+    updateDatabaseMatrixTable();
+    setInterval(updateDatabaseMatrixTable, 5000);
+</script>
+</body>
+</html>
