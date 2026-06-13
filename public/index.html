@@ -3,171 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CCTV Ultimate Control Panel</title>
+    <title>Token Control System Dashboard</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #08080A; color: #E4E4E7;
-            display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 15px;
+            background-color: #0A0A0E; color: #E4E4E7; padding: 30px;
         }
-        .container {
-            width: 100%; max-width: 440px; background: #111116;
-            border: 1px solid #1F1F2E; border-radius: 24px; padding: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-        }
-        h2 { font-size: 22px; font-weight: 700; color: #3B82F6; margin-bottom: 6px; }
-        .subtitle { font-size: 13px; color: #71717A; margin-bottom: 20px; }
-        input {
-            width: 100%; padding: 14px; border: 2px solid #1F1F2E; border-radius: 12px;
-            background: #161622; color: #FFF; font-size: 16px; font-weight: 600;
-            text-align: center; margin-bottom: 16px; text-transform: uppercase;
-        }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 12px; }
-        button {
-            width: 100%; padding: 14px; background: #3B82F6; color: #FFF;
-            border: none; border-radius: 12px; font-size: 14px; font-weight: 700;
-            cursor: pointer; transition: all 0.2s;
-        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { margin-bottom: 30px; border-bottom: 1px solid #1F1F2E; padding-bottom: 15px; }
+        h1 { color: #3B82F6; font-size: 24px; }
+        .panel-box { background: #12121A; border: 1px solid #1F1F2E; border-radius: 16px; padding: 20px; margin-bottom: 25px; }
+        .form-group { display: flex; gap: 15px; margin-top: 15px; }
+        select, button { padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+        select { background: #161622; color: #FFF; border: 1px solid #2D2D3F; }
+        button { background: #3B82F6; color: white; border: none; cursor: pointer; transition: 0.2s; }
         button:hover { background: #2563EB; }
-        .btn-success { background: #10B981; }
-        .btn-success:hover { background: #059669; }
-        .btn-danger { background: #EF4444; }
-        .btn-danger:hover { background: #DC2626; }
-        .btn-secondary { background: #27273A; border: 1px solid #3F3F46; }
-
-        .video-box {
-            width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 16px;
-            overflow: hidden; border: 1px solid #1F1F2E; position: relative;
-            display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
-        }
-        img { width: 100%; height: 100%; object-fit: cover; display: none; }
         
-        .status-bar {
-            background: #161622; padding: 12px; border-radius: 10px;
-            font-size: 13px; font-weight: 600; color: #A1A1AA;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            border: 1px solid #1F1F2E;
-        }
-        .dot { width: 8px; height: 8px; background: #52525B; border-radius: 50%; }
-        .dot.active { background: #10B981; animation: pulse 1.2s infinite; }
-        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
-        #control-panel { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: left; }
+        th, td { padding: 14px; border-bottom: 1px solid #1F1F2E; font-size: 14px; }
+        th { color: #A1A1AA; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        td { font-weight: 500; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .badge-pending { background: rgba(234, 179, 8, 0.15); color: #EAB308; }
+        .badge-active { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+        .badge-expired { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div id="login-panel">
-            <h2>CCTV Terminal</h2>
-            <div class="subtitle">Enter hardware architecture signature signature</div>
-            <input type="text" id="modelInput" value="RMX3870" />
-            <button onclick="connectSystemTunnel()">Connect Control Line</button>
+        <div class="header">
+            <h1>Token Provisioning Subsystem</h1>
+            <p style="color: #71717A; font-size: 14px;">Create and monitor authorization lifecycle channels</p>
         </div>
 
-        <div id="control-panel">
-            <h2 id="headerTitle">Device Console</h2>
-            <div class="subtitle" id="deviceStateText">Status Checking...</div>
+        <div class="panel-box">
+            <h3 style="font-size: 16px;">Generate New Registration Token</h3>
+            <div class="form-group">
+                <select id="durationSelect">
+                    <option value="1">Expire in 1 Hour</option>
+                    <option value="12">Expire in 12 Hours</option>
+                    <option value="24" selected>Expire in 24 Hours</option>
+                    <option value="168">Expire in 7 Days</option>
+                </select>
+                <button onclick="createNewKeyToken()">Generate System Key</button>
+            </div>
+            <div id="resultBox" style="margin-top: 15px; font-size: 15px; font-weight: bold; color: #10B981;"></div>
+        </div>
 
-            <div class="btn-group">
-                <button class="btn-success" onclick="triggerRemoteAction('START_CAM')">⚡ Start Stream</button>
-                <button class="btn-danger" onclick="triggerRemoteAction('STOP_CAM')">🛑 Stop Stream</button>
-            </div>
-            <div class="btn-group">
-                <button class="btn-secondary" onclick="updateLensDirection('BACK')">Rear Cam</button>
-                <button class="btn-secondary" onclick="updateLensDirection('FRONT')">Front Cam</button>
-            </div>
-
-            <div class="video-box">
-                <div id="loader-msg" style="color:#52525B; font-size:13px;">Pipeline Standby Stream</div>
-                <img id="viewfinderDisplay" alt="Live Stream Output" />
-            </div>
-
-            <div class="status-bar">
-                <span id="statusDot" class="dot"></span>
-                <span id="statusLabel">Initializing Sync Protocols...</span>
-            </div>
+        <div class="panel-box">
+            <h3 style="font-size: 16px; margin-bottom: 10px;">Active System Token Database Matrix</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Access Token Key</th>
+                        <th>Expiration Time</th>
+                        <th>Hardware Node Target</th>
+                        <th>Lifecycle Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tokenTableBody">
+                    </tbody>
+            </table>
         </div>
     </div>
 
 <script>
-    let wsUrl = "wss://superx-oje2.onrender.com";
-    let ws;
-    let targetHardwareSign = "";
-    let selectedLens = "BACK";
-
-    function connectSystemTunnel() {
-        targetHardwareSign = document.getElementById('modelInput').value.trim().toUpperCase();
-        if(!targetHardwareSign) return alert("Hardware signature empty!");
-
-        document.getElementById('login-panel').style.display = "none";
-        document.getElementById('control-panel').style.display = "block";
-        document.getElementById('headerTitle').innerText = `${targetHardwareSign} Controller`;
-
-        initializeWebsocketEngine();
-    }
-
-    function initializeWebsocketEngine() {
-        if(ws) ws.close();
-        ws = new WebSocket(wsUrl);
-        ws.binaryType = 'blob';
-
-        ws.onopen = () => {
-            document.getElementById('statusLabel').innerText = "Routing tunnel uplink functional.";
-            ws.send(JSON.stringify({ type: 'register_viewer', deviceModel: targetHardwareSign }));
-        };
-
-        ws.onmessage = (event) => {
-            if (event.data instanceof Blob) {
-                // Realtime binary drawing pipeline
-                const blobUrl = URL.createObjectURL(event.data);
-                const oldUrl = document.getElementById('viewfinderDisplay').src;
-                
-                document.getElementById('viewfinderDisplay').src = blobUrl;
-                document.getElementById('viewfinderDisplay').style.display = 'block';
-                document.getElementById('loader-msg').style.display = 'none';
-                
-                if(oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
-            } else {
-                const telemetryPacket = JSON.parse(event.data);
-                if(telemetryPacket.status === "connected") {
-                    document.getElementById('deviceStateText').innerText = `Terminal Interface Node: ${telemetryPacket.deviceState}`;
-                    document.getElementById('statusLabel').innerText = "Operational matrix linked.";
-                    document.getElementById('statusDot').className = "dot active";
-                }
-                if(telemetryPacket.status === "app_online") {
-                    document.getElementById('deviceStateText').innerText = "Terminal Interface Node: ONLINE";
-                }
-                if(telemetryPacket.status === "offline") {
-                    document.getElementById('deviceStateText').innerText = "Terminal Interface Node: OFFLINE";
-                    document.getElementById('viewfinderDisplay').style.display = 'none';
-                    document.getElementById('loader-msg').style.display = 'block';
-                }
+    function createNewKeyToken() {
+        const hours = document.getElementById('durationSelect').value;
+        fetch('/api/generate-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ durationHours: hours })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('resultBox').innerText = `Successfully Generated: ${data.key}`;
+                updateDatabaseMatrixTable();
             }
-        };
-
-        ws.onclose = () => {
-            document.getElementById('statusDot').className = "dot";
-            document.getElementById('statusLabel').innerText = "Tunnel connection disconnected. Auto-retrying...";
-            setTimeout(initializeWebsocketEngine, 3000); // Fail-safe fallback system auto reconnection loop
-        };
+        });
     }
 
-    function triggerRemoteAction(actionCode) {
-        if(ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'control_cmd',
-                deviceModel: targetHardwareSign,
-                action: actionCode,
-                cameraFacing: selectedLens
-            }));
-        }
+    function updateDatabaseMatrixTable() {
+        fetch('/api/keys-status')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('tokenTableBody');
+            tbody.innerHTML = '';
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#52525B;">No tokens allocated yet.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                let badgeClass = "badge-pending";
+                if(item.status === "ACTIVE_LOGIN") badgeClass = "badge-active";
+                if(item.status === "EXPIRED") badgeClass = "badge-expired";
+
+                const row = `<tr>
+                    <td style="color:#3B82F6; font-family:monospace; font-size:15px;">${item.key}</td>
+                    <td>${new Date(item.expiresAt).toLocaleString()}</td>
+                    <td style="color:#FFF;">${item.connectedDevice}</td>
+                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
     }
 
-    function updateLensDirection(lensCode) {
-        selectedLens = lensCode;
-        triggerRemoteAction('START_CAM');
-    }
+    // Auto-update table mapping loop every 5 seconds
+    updateDatabaseMatrixTable();
+    setInterval(updateDatabaseMatrixTable, 5000);
 </script>
 </body>
 </html>
